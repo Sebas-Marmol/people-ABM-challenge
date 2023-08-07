@@ -6,9 +6,9 @@ import jakarta.persistence.*;
 import java.util.Date;
 
 @Entity
-@Table(name = "Personas",uniqueConstraints={@UniqueConstraint(name = "UnicoTipoYNumeroDeDocumento",columnNames = {"perNumeroDocumento","perTipoDocumento"})})
+@Table(name = "Personas", uniqueConstraints = {@UniqueConstraint(name = "UnicoTipoYNumeroDeDocumento", columnNames = {"perNumeroDocumento", "perTipoDocumento"})})
 //No deberían haber 2 personas con el mismo tipo y número de documento simultáneamente.
-public class Person {
+public class Persona {
 
     @Id
     @GeneratedValue
