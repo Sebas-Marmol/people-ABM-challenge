@@ -2,9 +2,11 @@ package com.sebas.trimixpeople.services;
 
 import com.sebas.trimixpeople.enums.Documento;
 import com.sebas.trimixpeople.exceptions.EntityValidationException;
-import com.sebas.trimixpeople.models.Person;
+import com.sebas.trimixpeople.models.Persona;
 import com.sebas.trimixpeople.repositories.PersonRepository;
+import com.sebas.trimixpeople.specifications.PersonSpecification;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -21,7 +23,7 @@ public class PersonService {
         this.personRepository = personRepository;
     }
 
-    public Person insertPerson(Person person) throws EntityValidationException {
+    public Persona insertPerson(Persona person) throws EntityValidationException {
         String mensajeValidacion = validarPersona(person, null);
         if (!mensajeValidacion.equals("")) {
             throw new EntityValidationException(mensajeValidacion, 400);
@@ -29,8 +31,8 @@ public class PersonService {
         return personRepository.save(person);
     }
 
-    public Person updatePerson(Long id, Person person) throws EntityValidationException {
-        Optional<Person> preexistente = personRepository.findById(id);
+    public Persona updatePerson(Long id, Persona person) throws EntityValidationException {
+        Optional<Persona> preexistente = personRepository.findById(id);
         if (!preexistente.isPresent()) {
             throw new EntityValidationException("No se encontró una persona con el Id " + id, 400);
         }
@@ -42,16 +44,17 @@ public class PersonService {
         return personRepository.save(person);
     }
 
-    public List<Person> getPeople(String nombre, Documento documento) {
+    public List<Persona> getPeople(String nombre, Documento documento) {
+        Specification<Persona> spec = Specification.where(null);
         if (null != nombre) {
             //El challenge pide filtrar por nombre, opto que el mismo filtro se use como un OR en el apellido.
-            return personRepository.findByPerNombreContainsIgnoreCaseOrPerApellidoContainingIgnoreCase(nombre, nombre);
+            spec = spec.or(PersonSpecification.byNombre((nombre))).or(PersonSpecification.byApellido(nombre));
         }
         if (null != documento) {
-            return personRepository.findByPerTipoDocumento(documento);
+            spec = spec.and(PersonSpecification.byTipoDocumento(documento));
         }
-
-        return personRepository.findAll();
+        System.out.println(spec.toString());
+        return personRepository.findAll(spec);
     }
 
     public void deletePerson(Long id) throws EntityValidationException {
@@ -61,16 +64,11 @@ public class PersonService {
         personRepository.deleteById(id);
     }
 
-    private String validarPersona(Person person, Long id) {
-        if (isNull(person.getPerTipoDocumento().name()) || 0 == person.getPerNumeroDocumento() || isNull(person.getPerApellido()) || isNull(person.getPerNombre()) || null == person.getPerFechaNacimiento()) {
+    private String validarPersona(Persona person, Long id) {
+        if (null == person.getPerTipoDocumento() || 0 == person.getPerNumeroDocumento() || isNull(person.getPerApellido()) || isNull(person.getPerNombre()) || null == person.getPerFechaNacimiento()) {
             return "Ningún valor puede ser nulo.";
         }
-        Date today = new Date();
-        System.out.println(today);
-        if (person.getPerFechaNacimiento().after(today)) {
-            return "La fecha de nacimiento no puede ser posterior al día de hoy.";
-        }
-        List<Person> preexistente = personRepository.findByPerTipoDocumentoAndPerNumeroDocumento(person.getPerTipoDocumento(), person.getPerNumeroDocumento());
+        List<Persona> preexistente = personRepository.findByPerTipoDocumentoAndPerNumeroDocumento(person.getPerTipoDocumento(), person.getPerNumeroDocumento());
         if (!preexistente.isEmpty()) {
             if (null == id || id != preexistente.get(0).getPerId()) {
                 return "Ya existe registrada una persona con esa combinación de tipo y número de Documento.";
